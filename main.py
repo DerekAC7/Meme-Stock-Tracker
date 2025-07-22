@@ -5,9 +5,9 @@ from email.mime.multipart import MIMEMultipart
 import os
 
 # ========== CONFIG ========== #
-GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "derek.cournoyer@gmail.com")
-GMAIL_APP_PASSWORD = os.getenv("fxfopaaspgqetsoi")
-TO_EMAIL = "derek.cournoyer@gmail.com"
+GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+TO_EMAIL = GMAIL_ADDRESS  # You can customize this if needed
 MENTION_THRESHOLD = 300
 APE_URL = 'https://apewisdom.io/api/v1.0/filter/all-stocks/page/1'
 # ============================ #
