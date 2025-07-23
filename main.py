@@ -32,15 +32,19 @@ def load_history():
     """Load historical mention data from CSV."""
     history = defaultdict(list)
     if not os.path.exists(HISTORY_FILE):
+        print("⚠️ No history.csv found in repo root.")
         return history
 
     with open(HISTORY_FILE, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            history[row["ticker"]].append({
-                "date": datetime.strptime(row["date"], "%Y-%m-%d"),
-                "mentions": int(row["mentions"])
-            })
+            try:
+                history[row["ticker"]].append({
+                    "date": datetime.strptime(row["date"], "%Y-%m-%d"),
+                    "mentions": int(row["mentions"])
+                })
+            except Exception as e:
+                print(f"⚠️ Skipping row {row}: {e}")
     return history
 
 def save_today_mentions(data):
@@ -81,14 +85,18 @@ def build_alert_email(spikes, history):
     sell_lines = ""
     summary_lines = ""
 
+    print("\n=== DEBUG: Calculating ratios for each ticker ===")
     for s in spikes:
         ticker = s.get("ticker", "???")
         mentions = s.get("mentions", 0)
         avg_7d = compute_7day_average(history, ticker)
         ratio = mentions / avg_7d if avg_7d else 0
 
+        # Debug info
+        print(f"[DEBUG] {ticker} — Mentions today: {mentions}, 7d avg: {avg_7d:.2f}, Ratio: {ratio:.2f}")
+
         # Format ratio nicely (e.g., 2.3x avg)
-        ratio_text = f"{ratio:.1f}× avg"
+        ratio_text = f"{ratio:.1f}× avg" if avg_7d else "no avg"
 
         if mentions >= 800 and ratio >= SELL_MULTIPLIER:
             sell_lines += f"⚠️ <b>Sell Signal:</b> {ticker} — {mentions} vs {avg_7d:.0f} ({ratio_text})<br>"
