@@ -8,9 +8,9 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 
 # ========== CONFIG ========== #
-GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS", "derek.cournoyer@gmail.com")
+GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
-TO_EMAIL = "derek.cournoyer@gmail.com"
+TO_EMAIL = "(GMAIL_ADDRESS")
 
 MENTION_THRESHOLD = 300        # Minimum mentions for Buy signal
 SELL_MULTIPLIER = 2.0          # Sell if ≥ 2x 7-day average and ≥ 800 mentions
@@ -73,7 +73,7 @@ def compute_7day_average(history, ticker):
     return sum(mentions) / len(mentions) if mentions else 0
 
 def build_alert_email(spikes, history):
-    """Build HTML email using 7-day average comparison."""
+    """Build HTML email using 7-day average comparison, showing ratio."""
     if not spikes:
         return "<p>No significant WSB mention spikes today.</p>"
 
@@ -87,10 +87,13 @@ def build_alert_email(spikes, history):
         avg_7d = compute_7day_average(history, ticker)
         ratio = mentions / avg_7d if avg_7d else 0
 
+        # Format ratio nicely (e.g., 2.3x avg)
+        ratio_text = f"{ratio:.1f}× avg"
+
         if mentions >= 800 and ratio >= SELL_MULTIPLIER:
-            sell_lines += f"⚠️ <b>Sell Signal:</b> {ticker} mentions {mentions} (2x+ avg {avg_7d:.0f})<br>"
+            sell_lines += f"⚠️ <b>Sell Signal:</b> {ticker} — {mentions} vs {avg_7d:.0f} ({ratio_text})<br>"
         elif mentions >= MENTION_THRESHOLD and ratio >= BUY_MULTIPLIER:
-            buy_lines += f"🚀 <b>Buy Signal:</b> {ticker} mentions {mentions} (1.3x+ avg {avg_7d:.0f})<br>"
+            buy_lines += f"🚀 <b>Buy Signal:</b> {ticker} — {mentions} vs {avg_7d:.0f} ({ratio_text})<br>"
 
         summary_lines += f"📊 {ticker}: {mentions} mentions (7d avg: {avg_7d:.0f})<br>"
 
