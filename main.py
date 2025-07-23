@@ -10,11 +10,11 @@ from collections import defaultdict
 # ========== CONFIG ========== #
 GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
-TO_EMAIL = GMAIL_ADDRESS  # Send to same address as login
+TO_EMAIL = GMAIL_ADDRESS
 
-MENTION_THRESHOLD = 300        # Minimum mentions for Buy signal
-SELL_MULTIPLIER = 2.0          # Sell if ≥ 2x 7-day average and ≥ 800 mentions
-BUY_MULTIPLIER = 1.3           # Buy if ≥ 1.3x 7-day average
+MENTION_THRESHOLD = 300        # Minimum mentions for any signal
+BUY_MULTIPLIER = 1.3            # Buy if ≥ 1.3× avg but < 2×
+SELL_MULTIPLIER = 2.0           # Sell if ≥ 2× avg
 HISTORY_FILE = "history.csv"
 APE_URL = "https://apewisdom.io/api/v1.0/filter/all-stocks/page/1"
 # ============================ #
@@ -32,19 +32,15 @@ def load_history():
     """Load historical mention data from CSV."""
     history = defaultdict(list)
     if not os.path.exists(HISTORY_FILE):
-        print("⚠️ No history.csv found in repo root.", flush=True)
         return history
 
     with open(HISTORY_FILE, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            try:
-                history[row["ticker"]].append({
-                    "date": datetime.strptime(row["date"], "%Y-%m-%d"),
-                    "mentions": int(row["mentions"])
-                })
-            except Exception as e:
-                print(f"⚠️ Skipping row {row}: {e}", flush=True)
+            history[row["ticker"]].append({
+                "date": datetime.strptime(row["date"], "%Y-%m-%d"),
+                "mentions": int(row["mentions"])
+            })
     return history
 
 def save_today_mentions(data):
@@ -77,7 +73,7 @@ def compute_7day_average(history, ticker):
     return sum(mentions) / len(mentions) if mentions else 0
 
 def build_alert_email(spikes, history):
-    """Build HTML email using 7-day average comparison, showing ratio."""
+    """Build HTML email with improved buy/sell logic."""
     if not spikes:
         return "<p>No significant WSB mention spikes today.</p>"
 
@@ -85,24 +81,27 @@ def build_alert_email(spikes, history):
     sell_lines = ""
     summary_lines = ""
 
-    print("\n=== DEBUG: Calculating ratios for each ticker ===", flush=True)
+    # Rank by mentions to detect top 3 spikes
+    sorted_spikes = sorted(spikes, key=lambda x: x.get("mentions", 0), reverse=True)
+    top_spikes = {s.get("ticker") for s in sorted_spikes[:3]}
+
     for s in spikes:
         ticker = s.get("ticker", "???")
         mentions = s.get("mentions", 0)
         avg_7d = compute_7day_average(history, ticker)
         ratio = mentions / avg_7d if avg_7d else 0
 
-        # Debug info
-        print(f"[DEBUG] {ticker} — Mentions today: {mentions}, 7d avg: {avg_7d:.2f}, Ratio: {ratio:.2f}", flush=True)
-
-        # Format ratio nicely (e.g., 2.3x avg)
         ratio_text = f"{ratio:.1f}× avg" if avg_7d else "no avg"
 
-        if mentions >= 800 and ratio >= SELL_MULTIPLIER:
+        # Sell logic
+        if mentions >= MENTION_THRESHOLD and ratio >= SELL_MULTIPLIER and (mentions >= 800 or ticker in top_spikes):
             sell_lines += f"⚠️ <b>Sell Signal:</b> {ticker} — {mentions} vs {avg_7d:.0f} ({ratio_text})<br>"
-        elif mentions >= MENTION_THRESHOLD and ratio >= BUY_MULTIPLIER:
+
+        # Buy logic
+        elif mentions >= MENTION_THRESHOLD and ratio >= BUY_MULTIPLIER and ratio < SELL_MULTIPLIER:
             buy_lines += f"🚀 <b>Buy Signal:</b> {ticker} — {mentions} vs {avg_7d:.0f} ({ratio_text})<br>"
 
+        # Summary (always included)
         summary_lines += f"📊 {ticker}: {mentions} mentions (7d avg: {avg_7d:.0f})<br>"
 
     html = ""
@@ -111,7 +110,7 @@ def build_alert_email(spikes, history):
     if sell_lines:
         html += f"<h3>⚠️ Sell Alerts</h3>{sell_lines}<br>"
     html += f"<h3>📊 Daily Summary (8 AM PT)</h3>{summary_lines}"
-    html += "<p style='font-size:12px;color:gray;'>Auto-generated from your meme stock alert system (7-day average logic).</p>"
+    html += "<p style='font-size:12px;color:gray;'>Auto-generated from your meme stock alert system (improved logic).</p>"
     return html
 
 def send_email(subject, html_body):
@@ -132,24 +131,18 @@ def send_email(subject, html_body):
 
 def run_alert():
     """Main function to fetch, save, compute averages, and send alert."""
-    print("=== DEBUG MARKER: Script is running this version ===", flush=True)
-    print(f"Current working directory: {os.getcwd()}", flush=True)
-    print(f"Files in directory: {os.listdir('.')}", flush=True)
-
     data = fetch_mentions()
     if not data:
         print("No data from API — aborting run.", flush=True)
         return
 
-    # Save today's mentions
     save_today_mentions(data)
 
-    # Load full history and compute signals
     history = load_history()
     spikes = [t for t in data if t.get("mentions", 0) >= MENTION_THRESHOLD]
 
     html = build_alert_email(spikes, history)
-    send_email("🚨 WSB Buy/Sell Signal Report (7-Day Avg)", html)
+    send_email("🚨 WSB Buy/Sell Signal Report (Improved Logic)", html)
 
 if __name__ == "__main__":
     run_alert()
