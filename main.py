@@ -25,14 +25,14 @@ def fetch_mentions():
         resp = requests.get(APE_URL)
         return resp.json().get('results', [])
     except Exception as e:
-        print(f"❌ Failed to fetch ApeWisdom data: {e}")
+        print(f"❌ Failed to fetch ApeWisdom data: {e}", flush=True)
         return []
 
 def load_history():
     """Load historical mention data from CSV."""
     history = defaultdict(list)
     if not os.path.exists(HISTORY_FILE):
-        print("⚠️ No history.csv found in repo root.")
+        print("⚠️ No history.csv found in repo root.", flush=True)
         return history
 
     with open(HISTORY_FILE, "r") as f:
@@ -44,7 +44,7 @@ def load_history():
                     "mentions": int(row["mentions"])
                 })
             except Exception as e:
-                print(f"⚠️ Skipping row {row}: {e}")
+                print(f"⚠️ Skipping row {row}: {e}", flush=True)
     return history
 
 def save_today_mentions(data):
@@ -85,7 +85,7 @@ def build_alert_email(spikes, history):
     sell_lines = ""
     summary_lines = ""
 
-    print("\n=== DEBUG: Calculating ratios for each ticker ===")
+    print("\n=== DEBUG: Calculating ratios for each ticker ===", flush=True)
     for s in spikes:
         ticker = s.get("ticker", "???")
         mentions = s.get("mentions", 0)
@@ -93,7 +93,7 @@ def build_alert_email(spikes, history):
         ratio = mentions / avg_7d if avg_7d else 0
 
         # Debug info
-        print(f"[DEBUG] {ticker} — Mentions today: {mentions}, 7d avg: {avg_7d:.2f}, Ratio: {ratio:.2f}")
+        print(f"[DEBUG] {ticker} — Mentions today: {mentions}, 7d avg: {avg_7d:.2f}, Ratio: {ratio:.2f}", flush=True)
 
         # Format ratio nicely (e.g., 2.3x avg)
         ratio_text = f"{ratio:.1f}× avg" if avg_7d else "no avg"
@@ -126,16 +126,16 @@ def send_email(subject, html_body):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(GMAIL_ADDRESS, GMAIL_APP_PASSWORD)
             server.sendmail(GMAIL_ADDRESS, TO_EMAIL, msg.as_string())
-        print("✅ Email sent successfully.")
+        print("✅ Email sent successfully.", flush=True)
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
+        print(f"❌ Failed to send email: {e}", flush=True)
 
 def run_alert():
     """Main function to fetch, save, compute averages, and send alert."""
-    print("=== DEBUG MARKER: Script is running this version ===")
+    print("=== DEBUG MARKER: Script is running this version ===", flush=True)
     data = fetch_mentions()
     if not data:
-        print("No data from API — aborting run.")
+        print("No data from API — aborting run.", flush=True)
         return
 
     # Save today's mentions
