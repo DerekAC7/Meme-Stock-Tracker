@@ -10,7 +10,7 @@ from collections import defaultdict
 # ========== CONFIG ========== #
 GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
-TO_EMAIL = "(GMAIL_ADDRESS")
+TO_EMAIL = GMAIL_ADDRESS  # Send to same address as login
 
 MENTION_THRESHOLD = 300        # Minimum mentions for Buy signal
 SELL_MULTIPLIER = 2.0          # Sell if ≥ 2x 7-day average and ≥ 800 mentions
