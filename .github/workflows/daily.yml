@@ -25,16 +25,20 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run alert script (capture and display debug)
+      - name: Run alert script (show files first)
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
-          echo "=== STARTING SCRIPT ==="
+          echo "=== DEBUG: Show current working directory ==="
+          pwd
+          echo "=== DEBUG: List files in repo root ==="
+          ls -R
+          echo "=== DEBUG: Now running main.py ==="
           python main.py > debug_output.log 2>&1
-          echo "=== PYTHON DEBUG OUTPUT ==="
+          echo "=== PYTHON OUTPUT ==="
           cat debug_output.log
-          echo "=== SCRIPT FINISHED ==="
+          echo "=== END PYTHON OUTPUT ==="
 
       - name: Commit and push updated history.csv
         run: |
