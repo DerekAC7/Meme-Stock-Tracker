@@ -133,6 +133,9 @@ def send_email(subject, html_body):
 def run_alert():
     """Main function to fetch, save, compute averages, and send alert."""
     print("=== DEBUG MARKER: Script is running this version ===", flush=True)
+    print(f"Current working directory: {os.getcwd()}", flush=True)
+    print(f"Files in directory: {os.listdir('.')}", flush=True)
+
     data = fetch_mentions()
     if not data:
         print("No data from API — aborting run.", flush=True)
