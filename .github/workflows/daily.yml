@@ -25,13 +25,15 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run alert script (with forced logging)
+      - name: Run alert script (capture and display debug)
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
           echo "=== STARTING SCRIPT ==="
-          python main.py 2>&1 | tee debug_output.log
+          python main.py > debug_output.log 2>&1
+          echo "=== PYTHON DEBUG OUTPUT ==="
+          cat debug_output.log
           echo "=== SCRIPT FINISHED ==="
 
       - name: Commit and push updated history.csv
