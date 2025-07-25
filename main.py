@@ -44,18 +44,27 @@ def load_history():
 
 def save_today_mentions(data):
     today = datetime.utcnow().strftime("%Y-%m-%d")
-    file_exists = os.path.exists(HISTORY_FILE)
+
+    # Prevent duplicates for today's date
+    existing = set()
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row["date"] == today:
+                    existing.add(row["ticker"])
 
     with open(HISTORY_FILE, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["date", "ticker", "mentions"])
-        if not file_exists:
+        if not os.path.exists(HISTORY_FILE) or os.stat(HISTORY_FILE).st_size == 0:
             writer.writeheader()
         for t in data:
-            writer.writerow({
-                "date": today,
-                "ticker": t.get("ticker"),
-                "mentions": t.get("mentions", 0)
-            })
+            if t.get("ticker") not in existing:
+                writer.writerow({
+                    "date": today,
+                    "ticker": t.get("ticker"),
+                    "mentions": t.get("mentions", 0)
+                })
 
 def compute_7day_average(history, ticker):
     today = datetime.utcnow()
@@ -70,10 +79,11 @@ def compute_7day_average(history, ticker):
     return sum(mentions) / len(mentions) if mentions else 0
 
 def get_yesterday_mentions(history, ticker):
-    if ticker not in history or not history[ticker]:
-        return 0
-    sorted_entries = sorted(history[ticker], key=lambda x: x["date"], reverse=True)
-    return sorted_entries[0]["mentions"] if sorted_entries else 0
+    yesterday = datetime.utcnow().date() - timedelta(days=1)
+    for entry in sorted(history.get(ticker, []), key=lambda x: x["date"], reverse=True):
+        if entry["date"].date() == yesterday:
+            return entry["mentions"]
+    return 0
 
 def build_alert_email(spikes, history):
     if not spikes:
